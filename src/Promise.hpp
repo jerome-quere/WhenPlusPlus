@@ -32,22 +32,23 @@ namespace When
      */
     template <typename ...Args>
     template <typename T>
-    Promise<T> _Promise<Args...>::then(const std::function<T (Args...)>&f)
-    {
+    Promise<T> _Promise<Args...>::then(const std::function<T (Args...)>&f) {
 	Defered<T> d = defer<T>();
-	std::function<void (Args...)> cb = std::function<void (Args...)>([d, f] (Args... args) {
-		Defered<T> d2 = d;
-		try {
-		    d2.resolve(f(args...));
-		} catch (const std::exception& e) {
-		    d2.reject(e.what());
+	std::function<void ()> cb = std::function<void()> ([this, d, f] () {
+		auto d2 = d;
+
+		if (_status == RESOLVED) {
+		    try {
+			d2.resolve(apply_tuple(f, _result));
+		    } catch (const std::exception& e) {
+			d2.reject(e.what());
+		    }
+		}
+		else {
+		    d2.reject(_error);
 		}
 	    });
-
-	if (_status == UNRESOLVED)
-	    _successCallback.push_back(cb);
-	else if (_status == RESOLVED)
-	    apply_tuple(cb, _result);
+	addCallback(cb);
 	return d.promise();
     }
 
@@ -55,20 +56,22 @@ namespace When
     template <typename ...Args>
     Promise<bool> _Promise<Args...>::then(const std::function<void (Args...)>&f) {
 	Defered<bool> d = defer<bool>();
-	std::function<void (Args...)> cb = std::function<void (Args...)>([d, f] (Args... args) {
-		Defered<bool> d2 = d;
-		try {
-		    f(args...);
-		    d2.resolve(true);
-		} catch (const std::exception& e) {
-		    d2.reject(e.what());
+	std::function<void ()> cb = std::function<void ()> ([this, d, f] () {
+		auto d2 = d;
+
+		if (_status == RESOLVED) {
+		    try {
+			apply_tuple(f, _result);
+			d2.resolve(true);
+		    } catch (const std::exception& e) {
+			d2.reject(e.what());
+		    }
+		}
+		else {
+		    d2.reject(_error);
 		}
 	    });
-
-	if (_status == UNRESOLVED)
-	    _successCallback.push_back(cb);
-	else if (_status == RESOLVED)
-	    apply_tuple(cb, _result);
+	addCallback(cb);
 	return d.promise();
     }
 
@@ -76,21 +79,22 @@ namespace When
     template <typename ...P>
     Promise<P...> _Promise<Args...>::then(const std::function<Promise<P...> (Args...)>&f) {
 	Defered<P...> d = defer<P...>();
-	std::function<void (Args...)> cb = std::function<void (Args...)>([d, f] (Args... args) {
-		Defered<P...> d2 = d;
-		try {
-		    d2.resolve(f(args...));
-		} catch (const std::exception& e) {
-		    d2.reject(e.what());
+	std::function<void ()> cb = std::function<void ()> ([this, d, f] () {
+		auto d2 = d;
+
+		if (_status == RESOLVED) {
+		    try {
+			d2.resolve(apply_tuple(f, _result));
+		    } catch (const std::exception& e) {
+			d2.reject(e.what());
+		    }
+		}
+		else {
+		    d2.reject(_error);
 		}
 	    });
-
-	if (_status == UNRESOLVED)
-	    _successCallback.push_back(cb);
-	else if (_status == RESOLVED)
-	    apply_tuple(cb, _result);
+	addCallback(cb);
 	return d.promise();
-
     }
 
 
@@ -104,10 +108,11 @@ namespace When
     template <typename ...Args>
     void _Promise<Args...>::otherwise(const std::function<void (const std::string&)>&f)
     {
-	if (_status == UNRESOLVED)
-	    _errorCallback.push_back(f);
-	else if (_status == REJECTED)
-	    f(_error);
+	std::function<void ()> cb = std::function<void ()> ([this, f] () {
+		if (_status == REJECTED)
+		    f(_error);
+	    });
+	addCallback(cb);
     }
 
     template <typename ...Args>
@@ -129,11 +134,11 @@ namespace When
 	if (_status != UNRESOLVED)
 	    throw std::runtime_error("The Promise is aleready resolved or reject");
 
-	_result = std::tuple<Args...>(args...);
-	for (auto &f : _successCallback) {
-	    f(args...);
-	}
 	_status = RESOLVED;
+	_result = std::tuple<Args...>(args...);
+	for (auto &cb : _callbacks) {
+	    cb();
+	}
     }
 
     template <typename ...Args>
@@ -142,12 +147,21 @@ namespace When
 	if (_status != UNRESOLVED)
 	    throw std::runtime_error("The Promise is aleready resolved or reject");
 
-	_error = error;
-	for (auto &f : _errorCallback) {
-	    f(error);
-	}
 	_status = REJECTED;
+	_error = error;
+	for (auto &cb : _callbacks) {
+	    cb();
+	}
     }
+
+    template <typename ...Args>
+    void _Promise<Args...>::addCallback(const std::function <void()>& cb) {
+	if (_status == UNRESOLVED)
+	    _callbacks.push_back(cb);
+	else
+	    cb();
+    }
+
 
     /*
      * Start Promise implementation

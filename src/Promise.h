@@ -70,8 +70,9 @@ namespace When
 	void resolve(Args... args);
 	void reject(const std::string& error);
 
-	std::list<std::function<void (Args...)> > _successCallback;
-	std::list<std::function<void (const std::string&)> > _errorCallback;
+	void addCallback(const std::function<void ()>&);
+
+	std::list<std::function<void ()> > _callbacks;
 
 	Status _status;
 	std::tuple<Args...> _result;
