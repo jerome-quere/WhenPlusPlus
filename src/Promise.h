@@ -25,79 +25,31 @@
 #ifndef _WHEN_PROMISE_H_
 #define _WHEN_PROMISE_H_
 
-#include <list>
 #include <functional>
-#include <memory>
-#include <tuple>
 
-
-#include "Definition.h"
 #include "LambdaResolver.h"
 
 namespace When
 {
-    template <typename ...Args>
-    class _Promise {
 
-	enum Status {
-	    UNRESOLVED,
-	    RESOLVED,
-	    REJECTED
-	};
-
+    template <typename T>
+    class Promise
+    {
     public:
 
-	template<typename T>
-	Promise<T> then(const std::function<T (Args...)>&f);
+	Promise(const std::shared_ptr<Core<T> >& core);
 
-	Promise<bool> then(const std::function<void (Args...)>&f);
+	template <typename Lambda>
+	auto then(const Lambda& l)
+	    -> typename LambdaResolver<Lambda, T>::promise_type;
 
-	template <typename ...P>
-	Promise<P...> then(const std::function<Promise<P...> (Args...)>&f);
-
-	template<typename T>
-	typename LambdaResolver<T>::promiseType then(const T &f);
-
-
-	void otherwise(const std::function<void (const std::string&)>&f);
-
-	template<typename T>
-	void otherwise(const T &f);
+	void otherwise(const std::function<void (const std::string&)>&);
 
     private:
 
-	_Promise();
-	void resolve(Args... args);
-	void reject(const std::string& error);
+	std::shared_ptr<Core<T> > _core;
 
-	void addCallback(const std::function<void ()>&);
-
-	std::list<std::function<void ()> > _callbacks;
-
-	Status _status;
-	std::tuple<Args...> _result;
-	std::string _error;
-
-	friend class _Defered<Args...>;
     };
-
-    template <typename ...Args>
-    class Promise {
-
-    public:
-	template <typename T>
-	typename LambdaResolver<T>::promiseType then(const T &f);
-
-	template <typename T>
-	void otherwise(const T &f);
-
-    private:
-	Promise(std::shared_ptr<_Defered<Args...> > defer);
-	std::shared_ptr<_Defered<Args...> > _defer;
-
-	friend class Defered<Args...>;
-    };
-
 }
 
 #include "Promise.hpp"

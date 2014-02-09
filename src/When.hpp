@@ -22,11 +22,56 @@
  * THE SOFTWARE.
  */
 
+#include <memory>
+
+#include "Core.h"
+
 namespace When
 {
-    template <typename ...Args>
-    Defered<Args...> defer()
+    template <typename T>
+    Deferred<T> defer()
     {
-	return Defered<Args...>(new _Defered<Args...>());
+	Core<T>* core = new Core<T>();
+	return Deferred<T>(core->lock());
     }
+
+    //TODO Refactor
+    template <typename It>
+    Promise<bool> all(It begin, const It& end) {
+	auto defer = defer<bool>();
+	int* count = new int(1);
+	bool* failed = new bool(false);
+
+	auto onFinished = [count, failed, defer] () {
+	    auto d = defer;
+	    if (*failed == true)
+		d.reject("Cant resolve all promise");
+	    else
+		d.resolve(true);
+	    delete count;
+	    delete failed;
+	};
+
+	while (begin != end)
+	    {
+		(*count)++;
+		begin->success( [count, failed, onFinished] () {
+			(*count)--;
+			if (*count == 0)
+			    onFinished();
+		    });
+		begin->error( [count, failed, onFinished] () {
+			(*count)--;
+			*failed = true;
+			if (*count == 0)
+			    onFinished();
+		    });
+		++begin;
+	    }
+	(*count)--;
+	if (*count == 0)
+	    onFinished();
+	return defer.promise();
+    }
+
 }

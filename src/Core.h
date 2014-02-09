@@ -22,35 +22,53 @@
  * THE SOFTWARE.
  */
 
-#ifndef _WHEN_LAMBDA_RESOLVER_H_
-#define _WHEN_LAMBDA_RESOLVER_H_
+#ifndef _WHEN_CORE_H_
+#define _WHEN_CORE_H_
 
-#include "Definition.h"
+#include <list>
 
 namespace When
 {
-    template <typename R>
-    struct LambdaResolver2 {
-	typedef R return_type;
-	typedef Promise<R> promise_type;
-    };
+    template <typename T>
+    class Core
+    {
+	enum Status {
+	    PENDING,
+	    RESOLVED,
+	    REJECTED,
+	};
 
-    template <typename R>
-    struct LambdaResolver2<Promise<R> > {
-	typedef Promise<R> return_type;
-	typedef Promise<R> promise_type;
-    };
+    public:
+	Core();
+	template <typename R>
+	Promise<R> then(const std::function<R (const T&)> &f);
 
-    template <>
-    struct LambdaResolver2<void> {
-	typedef void return_type;
-	typedef Promise<bool> promise_type;
-    };
+	template <typename R>
+	Promise<R> then(const std::function<Promise<R> (const T&)> &f);
 
-    template <typename T, typename A1>
-    struct LambdaResolver : public LambdaResolver2<typename std::result_of<T(const A1&)>::type> {
+	Promise<bool> then(const std::function<void (const T&)> &f);
+
+	void otherwise(const std::function<void (const std::string&)> &f);
+
+	void resolve(const T& value);
+	void resolve(const Promise<T>& promise);
+
+	void reject(const std::string& err);
+
+	std::shared_ptr<Core<T> > lock();
+
+    private:
+
+	std::list<std::function<void ()> > _thenCb;
+	std::list<std::function<void ()> > _otherwiseCb;
+	Status _status;
+	T _value;
+	std::string _error;
+
+	std::weak_ptr<Core<T> > _self;
     };
 }
 
+#include "Core.hpp"
 
 #endif

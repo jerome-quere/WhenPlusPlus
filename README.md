@@ -5,11 +5,11 @@ Exemple1 :
 
 	int main()
 	{
-		When::Defered<int, float> defer = When::defer<int, float>();
-		When::Promise<int, float> p = defer.promise();
+		When::Defered<int> defer = When::defer<int>();
+		When::Promise<int> p = defer.promise();
 
-		p.then ([] (int a, float b) -> std::string {
-		       std::cout << "Defered was resolved with [" << a << ", " << b << "]" << std::endl;
+		p.then ([] (int a) -> std::string {
+		       std::cout << "Defered was resolved with [" << a << "]" << std::endl;
 		       return "Success";
 		});
 		p.otherwise([] (const std::string& error) -> void {
@@ -17,7 +17,7 @@ Exemple1 :
 		});
 
 		//
-		// defer.resolve(42, 4.2);
+		// defer.resolve(42);
 		//
 		// OR
 		//
@@ -30,11 +30,11 @@ Exemple2 :
 
 	int main()
 	{
-		When::Defered<int, float> defer = When::defer<int, float>();
-		When::Promise<int, float> p = defer.promise();
+		When::Defered<int> defer = When::defer<int>();
+		When::Promise<int> p = defer.promise();
 
-		When::Promise<std::string> p2 = p.then ([] (int a, float b) -> std::string {
-		       std::cout << "Defered was resolved with [" << a << ", " << b << "]" << std::endl;
+		When::Promise<std::string> p2 = p.then ([] (int a) -> std::string {
+		       std::cout << "Defered was resolved with [" << a << "]" << std::endl;
 		       return "Success";
 		});
 		p.otherwise([] (const std::string& error) -> void {
@@ -47,7 +47,7 @@ Exemple2 :
 		});
 
 		//
-		// defer.resolve(42, 4.2);
+		// defer.resolve(42);
 		//
 		// OR
 		//

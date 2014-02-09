@@ -22,34 +22,32 @@
  * THE SOFTWARE.
  */
 
-#ifndef _WHEN_LAMBDA_RESOLVER_H_
-#define _WHEN_LAMBDA_RESOLVER_H_
-
-#include "Definition.h"
+#ifndef _WHEN_DEFERRED_HPP_
+#define _WHEN_DEFERRED_HPP_
 
 namespace When
 {
-    template <typename R>
-    struct LambdaResolver2 {
-	typedef R return_type;
-	typedef Promise<R> promise_type;
-    };
+    template <typename T>
+    Promise<T> Deferred<T>::promise() {
+	return Promise<T>(_core);
+    }
 
-    template <typename R>
-    struct LambdaResolver2<Promise<R> > {
-	typedef Promise<R> return_type;
-	typedef Promise<R> promise_type;
-    };
+    template <typename T>
+    template <typename V>
+    void Deferred<T>::resolve(const V& value) {
+	_core->resolve(value);
+    }
 
-    template <>
-    struct LambdaResolver2<void> {
-	typedef void return_type;
-	typedef Promise<bool> promise_type;
-    };
+    template <typename T>
+    void Deferred<T>::reject(const std::string& err) {
+	_core->reject(err);
+    }
 
-    template <typename T, typename A1>
-    struct LambdaResolver : public LambdaResolver2<typename std::result_of<T(const A1&)>::type> {
-    };
+   template <typename T>
+   Deferred<T>::Deferred(const std::shared_ptr<Core<T> >& core) {
+       _core = core;
+   }
+
 }
 
 
